@@ -2,6 +2,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .agents import llm, tracer
+from .agents.intent_agent import extract_intent
+from .agents.resource_agent import plan_resources
+from .config import settings
+from .models.schemas import PipelineRequest
 
 app = FastAPI(title="NL to Terraform", version="0.1.0")
 
@@ -31,3 +35,15 @@ def test_llm():
         config={"callbacks": [tracer], "run_name": "test-llm-endpoint"}
     )
     return {"response": response.content}
+
+
+@app.post("/extract-intent")
+def extract_intent_endpoint(request: PipelineRequest):
+    return extract_intent(request.prompt)
+
+
+@app.post("/plan-resources")
+def plan_resources_endpoint(request: PipelineRequest):
+    intent = extract_intent(request.prompt)
+    resources = plan_resources(intent, settings.max_terraform_resources)
+    return {"intent": intent, "resources": resources}

@@ -1,0 +1,61 @@
+resource "aws_launch_template" "{name}" {{
+  name_prefix   = "{project_name}-lt-"
+  image_id      = "{ami_id}"
+  instance_type = "{instance_type}"
+
+  vpc_security_group_ids = [aws_security_group.{sg_name}_app.id]
+
+  block_device_mappings {{
+    device_name = "/dev/xvda"
+    ebs {{
+      volume_size = {volume_size}
+      encrypted   = {encrypted}
+    }}
+  }}
+
+  tag_specifications {{
+    resource_type = "instance"
+    tags = {{
+      Name        = "{project_name}-asg-instance"
+      Project     = "{project_name}"
+      Environment = "{environment}"
+      ManagedBy   = "terraform"
+    }}
+  }}
+}}
+
+resource "aws_autoscaling_group" "{name}" {{
+  name                = "{project_name}-asg"
+  min_size            = {min_size}
+  max_size            = {max_size}
+  desired_capacity    = {desired_capacity}
+  vpc_zone_identifier = [aws_subnet.{vpc_name}_az1.id, aws_subnet.{vpc_name}_az2.id]
+  target_group_arns   = [aws_lb_target_group.{alb_name}.arn]
+
+  launch_template {{
+    id      = aws_launch_template.{name}.id
+    version = "$Latest"
+  }}
+
+  tag {{
+    key                 = "Name"
+    value               = "{project_name}-asg-instance"
+    propagate_at_launch = true
+  }}
+}}
+
+resource "aws_autoscaling_policy" "{name}_scale_up" {{
+  name                   = "{project_name}-scale-up"
+  scaling_adjustment     = 1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.{name}.name
+}}
+
+resource "aws_autoscaling_policy" "{name}_scale_down" {{
+  name                   = "{project_name}-scale-down"
+  scaling_adjustment     = -1
+  adjustment_type        = "ChangeInCapacity"
+  cooldown               = 300
+  autoscaling_group_name = aws_autoscaling_group.{name}.name
+}}

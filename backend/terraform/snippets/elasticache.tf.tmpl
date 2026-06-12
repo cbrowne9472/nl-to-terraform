@@ -1,0 +1,48 @@
+resource "aws_elasticache_subnet_group" "{name}" {{
+  name       = "{project_name}-cache-subnet-group"
+  subnet_ids = [aws_subnet.{vpc_name}_az1.id, aws_subnet.{vpc_name}_az2.id]
+}}
+
+resource "aws_security_group" "{name}_sg" {{
+  name        = "{project_name}-cache-sg"
+  description = "Allow cache traffic from application instances"
+  vpc_id      = aws_vpc.{vpc_name}.id
+
+  ingress {{
+    description     = "Cache access from app"
+    from_port       = {cache_port}
+    to_port         = {cache_port}
+    protocol        = "tcp"
+    security_groups = [aws_security_group.{app_sg_name}_app.id]
+  }}
+
+  egress {{
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }}
+
+  tags = {{ Name = "{project_name}-cache-sg" }}
+}}
+
+resource "aws_elasticache_replication_group" "{name}" {{
+  replication_group_id      = "{project_name}-cache"
+  description                = "Redis cache for {project_name}"
+  engine                     = "redis"
+  engine_version             = "{engine_version}"
+  node_type                  = "{node_type}"
+  num_cache_clusters         = {num_cache_clusters}
+  automatic_failover_enabled = {automatic_failover}
+  at_rest_encryption_enabled = {encrypted}
+  transit_encryption_enabled = {encrypted}
+  subnet_group_name          = aws_elasticache_subnet_group.{name}.name
+  security_group_ids         = [aws_security_group.{name}_sg.id]
+
+  tags = {{
+    Name        = "{project_name}-cache"
+    Project     = "{project_name}"
+    Environment = "{environment}"
+    ManagedBy   = "terraform"
+  }}
+}}

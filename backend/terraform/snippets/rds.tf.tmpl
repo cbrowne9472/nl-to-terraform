@@ -1,0 +1,53 @@
+resource "aws_db_subnet_group" "{name}" {{
+  name       = "{project_name}-db-subnet-group"
+  subnet_ids = [aws_subnet.{vpc_name}_az1.id, aws_subnet.{vpc_name}_az2.id]
+
+  tags = {{ Name = "{project_name}-db-subnet-group" }}
+}}
+
+resource "aws_security_group" "{name}_sg" {{
+  name        = "{project_name}-db-sg"
+  description = "Allow database traffic from application instances"
+  vpc_id      = aws_vpc.{vpc_name}.id
+
+  ingress {{
+    description     = "DB access from app"
+    from_port       = {db_port}
+    to_port         = {db_port}
+    protocol        = "tcp"
+    security_groups = [aws_security_group.{app_sg_name}_app.id]
+  }}
+
+  egress {{
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }}
+
+  tags = {{ Name = "{project_name}-db-sg" }}
+}}
+
+resource "aws_db_instance" "{name}" {{
+  identifier              = "{project_name}-db"
+  engine                  = "{engine}"
+  engine_version          = "{engine_version}"
+  instance_class          = "{instance_class}"
+  allocated_storage       = {allocated_storage}
+  storage_encrypted       = {encrypted}
+  db_name                 = "{db_name}"
+  username                = "{username}"
+  password                = "{password}"
+  db_subnet_group_name    = aws_db_subnet_group.{name}.name
+  vpc_security_group_ids  = [aws_security_group.{name}_sg.id]
+  multi_az                = {multi_az}
+  backup_retention_period = {backup_retention_days}
+  skip_final_snapshot     = true
+
+  tags = {{
+    Name        = "{project_name}-db"
+    Project     = "{project_name}"
+    Environment = "{environment}"
+    ManagedBy   = "terraform"
+  }}
+}}
