@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+backend/terraform/workspace/
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
