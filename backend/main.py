@@ -1,11 +1,14 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from .agents import llm, tracer
 from .agents.intent_agent import extract_intent
 from .agents.resource_agent import plan_resources
+from .agents.deployment_agent import deploy, destroy
 from .config import settings
 from .models.schemas import PipelineRequest
+from .pipeline.orchestrator import run_pipeline
 
 app = FastAPI(title="NL to Terraform", version="0.1.0")
 
@@ -47,3 +50,27 @@ def plan_resources_endpoint(request: PipelineRequest):
     intent = extract_intent(request.prompt)
     resources = plan_resources(intent, settings.max_terraform_resources)
     return {"intent": intent, "resources": resources}
+
+
+@app.post("/pipeline/run")
+async def run_pipeline_endpoint(request: PipelineRequest):
+    return StreamingResponse(
+        run_pipeline(request.prompt),
+        media_type="text/event-stream"
+    )
+
+
+@app.post("/pipeline/deploy")
+async def deploy_endpoint(workspace_dir: str):
+    return StreamingResponse(
+        deploy(workspace_dir),
+        media_type="text/plain"
+    )
+
+
+@app.post("/pipeline/destroy")
+async def destroy_endpoint(workspace_dir: str):
+    return StreamingResponse(
+        destroy(workspace_dir),
+        media_type="text/plain"
+    )
