@@ -3,6 +3,7 @@ from backend.agents import llm, tracer
 from backend.agents.intent_agent import extract_intent
 from backend.agents.resource_agent import plan_resources
 from backend.agents.terraform_agent import generate_terraform
+from backend.agents.cost_agent import estimate_costs
 from backend.config import settings
 
 
@@ -109,3 +110,30 @@ def test_generate_terraform_contains_expected_resources():
 
     for resource in resources:
         assert f'resource "{resource["resource_type"]}"' in code
+
+
+def test_estimate_costs_returns_expected_shape():
+    intent = extract_intent("simple web app")
+    resources = plan_resources(intent, settings.max_terraform_resources)
+
+    breakdown = estimate_costs(resources, intent["region"])
+
+    assert "line_items" in breakdown
+    assert "total_monthly_usd" in breakdown
+    assert "cost_tier" in breakdown
+    assert "optimization_tips" in breakdown
+    assert breakdown["total_monthly_usd"] >= 0
+    assert breakdown["within_budget"] is True
+
+
+def test_cost_guardrail_flags_over_budget(monkeypatch):
+    monkeypatch.setattr(settings, "max_monthly_cost_usd", 0.0)
+
+    # EC2 + ALB-backed resources always carry a non-zero estimated cost,
+    # so a $0 budget is guaranteed to be exceeded.
+    intent = extract_intent("highly available web app with auto scaling")
+    resources = plan_resources(intent, settings.max_terraform_resources)
+    breakdown = estimate_costs(resources, intent["region"])
+
+    assert breakdown["total_monthly_usd"] > 0
+    assert breakdown["within_budget"] is False

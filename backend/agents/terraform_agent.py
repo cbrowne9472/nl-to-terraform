@@ -1,15 +1,8 @@
 import os
-import re
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from . import llm, tracer
+from . import llm, tracer, strip_code_fences
 from ..terraform.snippets import load_snippet
-
-CODE_FENCE_RE = re.compile(r"^```[a-zA-Z]*\n|\n```$")
-
-
-def _strip_code_fences(code: str) -> str:
-    return CODE_FENCE_RE.sub("", code.strip())
 
 TERRAFORM_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """You are a senior Terraform engineer. Generate production-ready Terraform code.
@@ -52,7 +45,7 @@ def generate_terraform(intent: dict, resources: list, project_name: str = "myapp
         },
         config={"callbacks": [tracer], "run_name": "terraform-generation"}
     )
-    return _strip_code_fences(result)
+    return strip_code_fences(result)
 
 
 def save_terraform(code: str, workspace_dir: str) -> str:
