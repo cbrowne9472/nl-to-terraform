@@ -4,6 +4,9 @@ A multi-agent AI system that turns a plain-English infrastructure request
 ("highly available web app with auto scaling") into validated,
 cost-estimated, deployable Terraform for AWS.
 
+<img width="1239" height="698" alt="image" src="https://github.com/user-attachments/assets/62381d0f-ac28-41f6-ab8e-57049720f3c9" />
+
+
 Six agents work in sequence — each step is traced in LangSmith so the full
 reasoning chain is auditable:
 
