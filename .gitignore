@@ -11,3 +11,4 @@ backend/terraform/workspace/
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+.claude/
